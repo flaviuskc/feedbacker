@@ -16,49 +16,64 @@
             class="text-pink-550 font-bold cursor-pointer"
             @click="openSignInModal"
           >
-            Sign in
+          {{ labelButton }}
           </span>
         </div>
       </div>
       <div class="flex flex-row gap-4 items-center max-md:hidden">
           <span 
+            v-if="route.name !== 'Feedbacks' && route.name !== 'Credentials'"
             class="text-white font-bold cursor-pointer"
             @click="openCreateAccountModal"
           >
             Create an account
           </span>
-        <button 
-          class="rounded-full bg-white text-pink-550 font-bold py-2 px-6"
-          @click="openSignInModal"
-        >
-          {{ labelButton }}
-        </button>
+          <div v-if="authStore.isUserAuthenticated" class="flex flex-row gap-4 text-white">
+            <span @click="router.push({ name: 'Credentials' })" class="cursor-pointer">Credentials</span>
+            <span @click="router.push({ name: 'Feedbacks' })" class="cursor-pointer">Feedbacks</span>
+          </div>
+          <button 
+            class="rounded-full bg-white text-pink-550 font-bold py-2 px-6"
+            @click="openSignInModal"
+          >
+            {{ labelButton }}
+          </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { computed } from 'vue'
   import { useAppModalStore } from '@/stores/AppModalStore'
-  import { useUserStore } from '@/stores/UserStore'
-  import { markRaw, ref } from 'vue'
+  import { useAuthStore } from '@/stores/AuthStore'
+  import { markRaw, nextTick, onUpdated, ref, watch } from 'vue'
   import ModalContentSignIn from './ModalContentSignIn.vue'
   import ModalContentCreateAccount from './ModalContentCreateAccount.vue'
   import { PhList } from '@phosphor-icons/vue'
+  import { useRoute, useRouter } from 'vue-router'
+
+  const props = defineProps<{
+    userName: string
+  }>()
     
   const appModalStore = useAppModalStore()
-  const userStore = useUserStore()
-
-  // const props = defineProps<{
-  //   userLogged: boolean
-  // }>()
+  const authStore = useAuthStore()
+  const route = useRoute()
+  const router = useRouter()
 
   const showMenu = ref(false)
-  // const changeLabel = ref(props.userLogged)
+  let labelButton = ref('Sign in')
 
-  const labelButton = computed(() => {
-    return userStore.userLogin.token ? userStore.userLogin.email + ' (sign out)' : 'Sign in'
+  // watch(() => authStore.isUserAuthenticated, (newVal, oldVal) => {
+  //   console.log('mudou de ', newVal, 'para ', oldVal)
+  // })
+
+  onUpdated(() => {
+    if(authStore.isUserAuthenticated){
+      labelButton.value = authStore.userAuth.name + ' (sign out)'
+    } else {
+      labelButton.value = 'Sign in'
+    }  
   })
 
   const openMobileMenu = ():void => {
@@ -83,12 +98,21 @@
   }
 
   const openSignInModal = (): void => {
+    const token = sessionStorage.getItem('token')
+    if(token){
+      sessionStorage.clear()
+      router.push({ name: 'Home' })
+      authStore.isUserAuthenticated = false
+      return
+    }
+
     if(showMenu.value === true){
       showMenu.value = false
     }
+
     appModalStore.open(
       { title: 'Sign in', isVisible: true },
       markRaw(ModalContentSignIn)
-      )
+    )
   }
 </script>

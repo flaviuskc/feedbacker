@@ -1,31 +1,33 @@
-import axios from 'axios'
+import axios from '@/utils/axios'
 import { defineStore } from 'pinia'
 
 interface IUser{
-    name: string,
-    email: string | null,
-    password: string | null,
-    token: string | null
+    name: string
+    email: string
+    token: string
+    apiKey: string
 }
 
 export const useUserStore = defineStore('user-store', () => {
-    type UserLogin = Omit<IUser, 'name'>
-    const userLogin: UserLogin = {
-        email: null,
-        password: null,
-        token: null
+    let userLogin: IUser = {
+        name: '',
+        email: '',
+        token: '',
+        apiKey: ''
     }
 
-    function getUserLogged() {
+    function getUser() {
         axios.get('users/me')
         .then((response) => {
-            console.log('resposta função getUserLogged: ', response)
-            return response.data
+            console.log('resposta função getUser: ', response)
+            userLogin.name = response.data.name
+            userLogin.email = response.data.email
+            userLogin.apiKey = response.data.apiKey
         })
         .catch(error => {
-            console.log(error)
+            console.log('error no getUser: ', error)
         })
     }
 
-    return { userLogin, getUserLogged }
+    return { userLogin, getUser }
 })

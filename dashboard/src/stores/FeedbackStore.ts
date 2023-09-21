@@ -1,53 +1,63 @@
 import axios from '@/utils/axios'
 import { defineStore } from 'pinia'
-import { useUserStore } from './UserStore'
+import { ref } from 'vue'
 
 interface IFeedback{
-    description: string
-    tag: string
-    page?: string
-    user?: string
-    device?: string
+    apiKey: string
+    createdAt: number
+    device: string
+    fingerprint: string
+    id: number
+    page: string
+    text: string
+    type: string
 }
 
 interface IFilter{
     label: string
-    quantity: number
+    amount?: number
 }
 
 export const useFeedbackStore = defineStore('feedback-store', () => {
-    const userStore = useUserStore()
-    let feedbacks!: IFeedback[]
-    let filters!: IFilter[]
+    let feedbacks: IFeedback[] = []
+    let filters: IFilter[] = []
+    let loadingFilters = ref(true)
+    let loadingFeedbacks = ref(true)
 
-    function getFilters() {
-        axios.get(`feedbacks/summary?token=Bearer ${userStore.userLogin.token}`)
-        .then(response => {
-            console.log('sucesso no get filters: ', response)
-            filters = response.data
-        })
-        .catch(error => {
-            console.log('erro no get filters: ', error)
-        })
+    const getFilters = async () => {
+        try {
+            const response = await axios.get('feedbacks/summary')
+            for (const key in response.data) {
+                if (response.data.hasOwnProperty(key)) {
+                    filters.push({
+                        label: key.toLowerCase()
+                    })
+                }
+            }
+            loadingFilters.value = false
+        } catch (error) {
+            console.log('erro try catch filters: ', error)
+        }
     }
 
-    function getIssuesFeedback() {
-        feedbacks.filter(feedback => {
-            return feedback.tag === 'issues'
-        })
+    const getFeedbacks = async () => {
+        try {
+            const response = await axios.get('feedbacks')
+            for (let i = 0; i < response.data.results.length; i++) {
+                feedbacks.push(response.data.results[i])
+            }
+            loadingFeedbacks.value = false
+        } catch (error) {
+            console.log('erro try catch feedbacks: ', error)
+        }
     }
 
-    function getIdeasFeedback() {
-        feedbacks.filter(feedback => {
-            return feedback.tag === 'ideas'
-        })
+    return { 
+        feedbacks,
+        loadingFilters,
+        loadingFeedbacks,
+        filters,
+        getFilters,
+        getFeedbacks
     }
-
-    function getOthersFeedback() {
-        feedbacks.filter(feedback => {
-            return feedback.tag === 'others'
-        })
-    }
-
-    return { feedbacks, filters, getFilters, getIssuesFeedback, getIdeasFeedback, getOthersFeedback }
 })

@@ -9,7 +9,7 @@
                     <h3 class="font-black text-2xl lg:text-4xl">{{ modalStore.modal.title }}</h3>
                     <ph-x :size="24" @click="modalStore.close" class="cursor-pointer" />
                 </div>
-                <component :is="modalStore.modal.component" @login="userSignedIn($event)"></component>
+                <component :is="modalStore.modal.component"></component>
             </div>
         </div>
     </Teleport>
@@ -20,13 +20,5 @@
     import { PhX } from '@phosphor-icons/vue'
 
     const modalStore = useAppModalStore()
-
-    const emit = defineEmits<{
-        (event: 'changeUser', isUserChanged: boolean ): void
-    }>()
-
-    function userSignedIn(changeUser: boolean) {
-        emit('changeUser', changeUser)
-    }
 
 </script>

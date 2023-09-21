@@ -1,44 +1,61 @@
 import axios from '@/utils/axios'
-import { useRouter } from 'vue-router'
 import { defineStore } from 'pinia'
-import { useUserStore } from './UserStore'
-import { useToast } from 'vue-toastification'
 
+interface IUser{
+    name: string | null
+    email: string | null
+    token: string | null
+    apiKey: string | null
+}
 
 export const useAuthStore = defineStore('auth-store', () => {
-    const userStore = useUserStore()
-    const router = useRouter()
-    const toast = useToast()
+    let userAuth: IUser = {
+        name: null,
+        email: null,
+        token: null,
+        apiKey: null
+    }
+    let isUserAuthenticated!: boolean | null
 
-    function login(email:string, password:string) {
-        axios.post('auth/login', {
-            email: email,
-            password: password
-        })
-        .then(response => {
-            // loading.value = false
-            userStore.userLogin.email = email
-            userStore.userLogin.password = password
-            userStore.userLogin.token = response.data.token
-            // appModalStore.close()
-            setTimeout(() => {
-                router.push({ name: 'Feedbacks' })
-            }, 500)
+    async function login(email:string, password:string) {
+        try {
+            const response = await axios.post('auth/login', {
+                email: email,
+                password: password
+            })
+            userAuth.email = email
+            userAuth.token = response.data.token
+            sessionStorage.setItem('token', response.data.token)
+            isUserAuthenticated = true
+        } catch (error) {
+            throw error
+        }
+    }
+
+    async function registerUser(name:string, email:string, password:string) {
+        try {
+            const response = await axios.post('auth/register', {
+                name: name,
+                email: email,
+                password: password
+            })
+            login(response.data.email, response.data.password)
+        } catch (error) {
+            console.log('erro na criação: ', error)
+        }
+    }
+
+    function getUserAuthenticated() {
+        axios.get('users/me')
+        .then((response) => {
+            userAuth.name = response.data.name
+            userAuth.email = response.data.email
+            userAuth.apiKey = response.data.apiKey
         })
         .catch(error => {
-            console.log('erro: ', error)
-            // loading.value = false
-            if(error.response.status === 404){
-                toast.error('Email not found')
-            }
-            if(error.response.status === 400){
-                toast.error('It seems that we are having troubles to sign you in. Try again, please.')
-            }
-            if(error.response.status === 401){
-                toast.error('Email or password incorrect')
-            }
+            console.log('error no getUser: ', error)
         })
     }
 
-    return { login }
+    return { login, getUserAuthenticated, registerUser, userAuth, isUserAuthenticated }
 })

@@ -40,8 +40,8 @@
         </div>
         <button 
             class="rounded-full bg-pink-550 text-white font-bold py-2 px-6 text-lg mt-9"
-            :class="{ 'opacity-50 cursor-not-allowed flex flex-row gap-2 items-center': loading }"
-            :disabled="loading"
+            :class="{ 'opacity-50 cursor-not-allowed flex flex-row gap-2 items-center': loading || isAuth }"
+            :disabled="loading || isAuth"
             type="submit"
         >
             <ph-arrow-clockwise  
@@ -50,6 +50,11 @@
                 :color="'#FFFFFF'"
                 class="animate-spin"
             />
+            <PhCheckCircle
+                v-if="isAuth"
+                :size="24"
+                :color="'#FFFFFF'"
+            />
             Sign in
         </button>    
     </form>
@@ -57,20 +62,27 @@
 
 <script setup lang="ts">
     import { ref } from 'vue'    
-    import { useAppModalStore } from '@/stores/AppModalStore'
+    import { useRouter } from 'vue-router'
     import { useAuthStore } from '@/stores/AuthStore'
-    import { PhArrowClockwise } from '@phosphor-icons/vue'
-
-    const appModalStore = useAppModalStore()
+    import { useUserStore } from '@/stores/UserStore'
+    import { PhArrowClockwise, PhCheckCircle } from '@phosphor-icons/vue'
+    import { useAppModalStore } from '@/stores/AppModalStore'
+    import { useToast } from 'vue-toastification'
+    
     const authStore = useAuthStore()
+    const userStore = useUserStore()
+    const appModalStore = useAppModalStore()
+    const toast = useToast()
+    const router = useRouter()
     const email = ref('')
     const errorEmail = ref(false)
     const password = ref('')
     const errorPassword = ref(false)
     const loading = ref(false)
+    const isAuth = ref(false)
 
-
-    const handleSubmit = () => {
+    
+    async function handleSubmit() {
         loading.value = true
         email.value === '' ? errorEmail.value = true : errorEmail.value = false
         password.value === '' ? errorPassword.value = true : errorPassword.value = false
@@ -80,8 +92,28 @@
             return
         }
 
-        authStore.login(email.value, password.value)
-        appModalStore.close()
+        try {
+            await authStore.login(email.value, password.value)
+            authStore.getUserAuthenticated()
+            loading.value = false
+            isAuth.value = true
+            setTimeout(() => {
+                appModalStore.close()
+                authStore.isUserAuthenticated = true
+                router.push({ name: 'Feedbacks' })
+            }, 500)
+        } catch (error:any) {
+            loading.value = false
+            if(error.response.status === 404){
+                toast.error('Email not found')
+            }
+            if(error.response.status === 400){
+                toast.error('It seems that we are having troubles to sign you in. Try again, please.')
+            }
+            if(error.response.status === 401){
+                toast.error('Email or password incorrect')
+            }
+        }
 
     }
 </script>

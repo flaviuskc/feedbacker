@@ -58,8 +58,8 @@
         </div>
         <button 
             class="rounded-full bg-pink-550 text-white font-bold py-2 px-6 text-lg mt-9"
-            :class="{ 'opacity-50 cursor-not-allowed flex flex-row gap-2 items-center': loading }"
-            :disabled="loading"
+            :class="{ 'opacity-50 cursor-not-allowed flex flex-row gap-2 items-center': loading || isAuth }"
+            :disabled="loading || isAuth"
         >
             <ph-arrow-clockwise  
                 v-if="loading"
@@ -67,22 +67,28 @@
                 :color="'#FFFFFF'"
                 class="animate-spin"
             />
+            <PhCheckCircle
+                v-if="isAuth"
+                :size="24"
+                :color="'#FFFFFF'"
+            />
             Create account
-        </button>
+        </button> 
     </form>
 </template>
 
 <script setup lang="ts">
     import { ref } from 'vue'
-    import axios from 'axios'
     import { useRouter } from 'vue-router'
     import { useAppModalStore } from '@/stores/AppModalStore'
-    import { useUserStore } from '@/stores/UserStore'
-    import { PhArrowClockwise } from '@phosphor-icons/vue'
+    import { PhArrowClockwise, PhCheckCircle } from '@phosphor-icons/vue'
+    import { useAuthStore } from '@/stores/AuthStore'
+    import { useToast } from 'vue-toastification'
 
     const router = useRouter()
     const appModalStore = useAppModalStore()
-    const userStore = useUserStore()
+    const authStore = useAuthStore()
+    const toast = useToast()
 
     const username = ref('')
     const errorUsername = ref(false)
@@ -91,9 +97,10 @@
     const password = ref('')
     const errorPassword = ref(false)
     const loading = ref(false)
+    const isAuth = ref(false)
     let errorPasswordMessage = ''
 
-    const handleSubmit = () => {
+    async function handleSubmit(){
         loading.value = true
         !email.value ? errorEmail.value = true : errorEmail.value = false
         !password.value ? errorPassword.value = true : errorPassword.value = false
@@ -112,34 +119,22 @@
             return
         }
 
-        function login(email:string, password:string) {
-            axios.post('auth/login', {
-                email: email,
-                password: password
-            })
-            .then(response => {
-                loading.value = false
-                userStore.userLogin.email = email
-                userStore.userLogin.password = password
-                userStore.userLogin.token = response.data.token
+        try {
+            await authStore.registerUser(username.value, email.value, password.value)
+            loading.value = false
+            isAuth.value = true
+            setTimeout(() => {
                 appModalStore.close()
-                setTimeout(() => {
-                    router.push({ name: 'Feedbacks' })
-                }, 500)
-            })
+                authStore.isUserAuthenticated = true
+                router.push({ name: 'Feedbacks' })
+            }, 500)
+        } catch (error:any) {
+            loading.value = false
+            if(error.response.status === 404){
+                toast.error('Email not found')
+            }
         }
 
-        axios.post('auth/register', {
-            name: username.value,
-            email: email.value,
-            password: password.value
-        })
-        .then((response) => {
-            login(response.data.email, response.data.password)
-        })
-        .catch(error => {
-            console.log('erro na criação: ', error)
-        })
-
+        
     }
 </script>
