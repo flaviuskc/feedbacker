@@ -4,7 +4,7 @@
   "description": "Backend development by third party",
   "main": "index.js",
   "scripts": {
-    "start": "JWT_SECRET=sssshhhh node index.js",
+    "start": "set JWT_SECRET=sssshhhh && node index.js",
     "build": "docker build -t feedbacker .",
     "container": "docker run -d -p 3000:3000 feedbacker",
     "dev": "DEBUG=* JWT_SECRET=sssshhhh nodemon index.js"
